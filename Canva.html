@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Feedback System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    body {
+      box-sizing: border-box;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+    .star { cursor: pointer; transition: transform 0.2s; }
+    .star:hover { transform: scale(1.2); }
+    .star.filled { color: #f59e0b; }
+    .star.empty { color: #d1d5db; }
+    .nav-link { transition: all 0.3s ease; }
+    .nav-link:hover { background: rgba(255,255,255,0.1); }
+    .nav-link.active { background: rgba(255,255,255,0.2); border-left: 3px solid #fff; }
+    .card { transition: transform 0.2s, box-shadow 0.2s; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .feedback-item { animation: slideIn 0.3s ease; }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .btn-primary { transition: all 0.3s ease; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
+    .loading-spinner {
+      border: 3px solid #e5e7eb;
+      border-top: 3px solid #4f46e5;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full bg-slate-50">
+  <div id="app" class="h-full flex overflow-auto"><!-- Sidebar Navigation -->
+   <nav class="w-64 bg-gradient-to-b from-indigo-600 to-indigo-800 text-white flex-shrink-0 flex flex-col">
+    <div class="p-6 border-b border-indigo-500">
+     <h1 id="nav-title" class="text-xl font-bold flex items-center gap-2">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+      </svg> Student Feedback</h1>
+    </div>
+    <div class="flex-1 py-4"><a href="#" class="nav-link active flex items-center gap-3 px-6 py-3 text-white" data-page="home">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg> Dashboard </a> <a href="#" class="nav-link flex items-center gap-3 px-6 py-3 text-white" data-page="submit">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg> Submit Feedback </a> <a href="#" class="nav-link flex items-center gap-3 px-6 py-3 text-white" data-page="view">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg> View Feedback </a>
+    </div>
+    <div class="p-4 border-t border-indigo-500 text-sm text-indigo-200">
+     <p id="feedback-count">0 feedback entries</p>
+    </div>
+   </nav><!-- Main Content -->
+   <main class="flex-1 overflow-auto"><!-- Page 1: Dashboard/Home -->
+    <div id="page-home" class="page active p-8">
+     <div class="max-w-4xl mx-auto">
+      <div class="mb-8">
+       <h2 id="welcome-heading" class="text-3xl font-bold text-slate-800 mb-2">Welcome to Student Feedback</h2>
+       <p id="welcome-text" class="text-slate-600">Share your thoughts and help us improve the learning experience.</p>
+      </div><!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+       <div class="card bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+        <div class="flex items-center gap-4">
+         <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+          <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+          </svg>
+         </div>
+         <div>
+          <p class="text-2xl font-bold text-slate-800" id="stat-total">0</p>
+          <p class="text-sm text-slate-500">Total Feedback</p>
+         </div>
+        </div>
+       </div>
+       <div class="card bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+        <div class="flex items-center gap-4">
+         <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+          <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+         </div>
+         <div>
+          <p class="text-2xl font-bold text-slate-800" id="stat-avg">0.0</p>
+          <p class="text-sm text-slate-500">Average Rating</p>
+         </div>
+        </div>
+       </div>
+       <div class="card bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+        <div class="flex items-center gap-4">
+         <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+         </div>
+         <div>
+          <p class="text-2xl font-bold text-slate-800" id="stat-positive">0</p>
+          <p class="text-sm text-slate-500">Positive (4-5⭐)</p>
+         </div>
+        </div>
+       </div>
+      </div><!-- Quick Actions -->
+      <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
+       <h3 class="text-lg font-semibold text-slate-800 mb-4">Quick Actions</h3>
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><button class="quick-action flex items-center gap-3 p-4 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors text-left" data-page="submit">
+         <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+         </div>
+         <div>
+          <p class="font-medium text-slate-800">Submit New Feedback</p>
+          <p class="text-sm text-slate-500">Share your thoughts on a course</p>
+         </div></button> <button class="quick-action flex items-center gap-3 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors text-left" data-page="view">
+         <div class="w-10 h-10 bg-slate-600 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+         </div>
+         <div>
+          <p class="font-medium text-slate-800">View All Feedback</p>
+          <p class="text-sm text-slate-500">Browse submitted feedback</p>
+         </div></button>
+       </div>
+      </div>
+     </div>
+    </div><!-- Page 2: Submit Feedback -->
+    <div id="page-submit" class="page p-8">
+     <div class="max-w-2xl mx-auto">
+      <div class="mb-8">
+       <h2 class="text-3xl font-bold text-slate-800 mb-2">Submit Feedback</h2>
+       <p class="text-slate-600">Help us improve by sharing your experience.</p>
+      </div>
+      <form id="feedback-form" class="bg-white rounded-xl p-8 shadow-sm border border-slate-100">
+       <div class="space-y-6"><!-- Student Name -->
+        <div><label for="student-name" class="block text-sm font-medium text-slate-700 mb-2">Your Name</label> <input type="text" id="student-name" required class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors" placeholder="Enter your name">
+        </div><!-- Course -->
+        <div><label for="course" class="block text-sm font-medium text-slate-700 mb-2">Course</label> <select id="course" required class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"> <option value="">Select a course</option> <option value="Mathematics">Mathematics</option> <option value="Physics">Physics</option> <option value="Chemistry">Chemistry</option> <option value="Biology">Biology</option> <option value="Computer Science">Computer Science</option> <option value="English">English</option> <option value="History">History</option> <option value="Art">Art</option> </select>
+        </div><!-- Feedback Type -->
+        <div><label for="feedback-type" class="block text-sm font-medium text-slate-700 mb-2">Feedback Type</label> <select id="feedback-type" required class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"> <option value="">Select type</option> <option value="General">General Feedback</option> <option value="Suggestion">Suggestion</option> <option value="Complaint">Complaint</option> <option value="Appreciation">Appreciation</option> </select>
+        </div><!-- Rating -->
+        <div><label class="block text-sm font-medium text-slate-700 mb-2">Rating</label>
+         <div id="star-rating" class="flex gap-2"><span class="star empty text-3xl" data-value="1">★</span> <span class="star empty text-3xl" data-value="2">★</span> <span class="star empty text-3xl" data-value="3">★</span> <span class="star empty text-3xl" data-value="4">★</span> <span class="star empty text-3xl" data-value="5">★</span>
+         </div><input type="hidden" id="rating" value="0">
+        </div><!-- Message -->
+        <div><label for="message" class="block text-sm font-medium text-slate-700 mb-2">Your Feedback</label> <textarea id="message" required rows="4" class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors resize-none" placeholder="Share your thoughts..."></textarea>
+        </div><!-- Submit Button --> <button type="submit" id="submit-btn" class="btn-primary w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"> <span id="submit-btn-text">Submit Feedback</span> <span id="submit-spinner" class="loading-spinner hidden"></span> </button>
+       </div><!-- Success Message -->
+       <div id="success-message" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div class="flex items-center gap-3">
+         <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+         </svg>
+         <p class="text-green-800 font-medium">Thank you! Your feedback has been submitted successfully.</p>
+        </div>
+       </div><!-- Error Message -->
+       <div id="error-message" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex items-center gap-3">
+         <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+         </svg>
+         <p class="text-red-800 font-medium" id="error-text">Something went wrong. Please try again.</p>
+        </div>
+       </div><!-- Limit Warning -->
+       <div id="limit-warning" class="hidden mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div class="flex items-center gap-3">
+         <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+         </svg>
+         <p class="text-amber-800 font-medium">Maximum limit of 999 feedback entries reached. Please delete some entries first.</p>
+        </div>
+       </div>
+      </form>
+     </div>
+    </div><!-- Page 3: View Feedback -->
+    <div id="page-view" class="page p-8">
+     <div class="max-w-4xl mx-auto">
+      <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+       <div>
+        <h2 class="text-3xl font-bold text-slate-800 mb-2">All Feedback</h2>
+        <p class="text-slate-600">Browse and manage submitted feedback.</p>
+       </div>
+       <div class="flex gap-3"><select id="filter-course" class="px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <option value="">All Courses</option> <option value="Mathematics">Mathematics</option> <option value="Physics">Physics</option> <option value="Chemistry">Chemistry</option> <option value="Biology">Biology</option> <option value="Computer Science">Computer Science</option> <option value="English">English</option> <option value="History">History</option> <option value="Art">Art</option> </select> <select id="filter-type" class="px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"> <option value="">All Types</option> <option value="General">General</option> <option value="Suggestion">Suggestion</option> <option value="Complaint">Complaint</option> <option value="Appreciation">Appreciation</option> </select>
+       </div>
+      </div><!-- Feedback List -->
+      <div id="feedback-list" class="space-y-4"><!-- Empty State -->
+       <div id="empty-state" class="bg-white rounded-xl p-12 shadow-sm border border-slate-100 text-center">
+        <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+         <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+         </svg>
+        </div>
+        <h3 class="text-lg font-medium text-slate-800 mb-2">No feedback yet</h3>
+        <p class="text-slate-500 mb-4">Be the first to share your thoughts!</p><button class="quick-action bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors" data-page="submit"> Submit Feedback </button>
+       </div>
+      </div>
+     </div>
+    </div>
+   </main>
+  </div><!-- Delete Confirmation Modal -->
+  <div id="delete-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+   <div class="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+    <div class="text-center">
+     <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+     </div>
+     <h3 class="text-lg font-semibold text-slate-800 mb-2">Delete Feedback?</h3>
+     <p class="text-slate-500 mb-6">This action cannot be undone.</p>
+     <div class="flex gap-3 justify-center"><button id="cancel-delete" class="px-6 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button> <button id="confirm-delete" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"> <span>Delete</span> <span id="delete-spinner" class="loading-spinner hidden"></span> </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    // Default configuration
+    const defaultConfig = {
+      system_title: 'Student Feedback',
+      welcome_message: 'Share your thoughts and help us improve the learning experience.',
+      submit_button_text: 'Submit Feedback',
+      background_color: '#f8fafc',
+      surface_color: '#ffffff',
+      text_color: '#1e293b',
+      primary_action_color: '#4f46e5',
+      secondary_action_color: '#64748b'
+    };
+
+    // Application state
+    let feedbackData = [];
+    let currentRating = 0;
+    let deleteTarget = null;
+
+    // Navigation
+    function navigateTo(pageName) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+      
+      document.getElementById(`page-${pageName}`).classList.add('active');
+      document.querySelector(`.nav-link[data-page="${pageName}"]`).classList.add('active');
+    }
+
+    // Star rating
+    function setupStarRating() {
+      const stars = document.querySelectorAll('#star-rating .star');
+      stars.forEach(star => {
+        star.addEventListener('click', () => {
+          currentRating = parseInt(star.dataset.value);
+          document.getElementById('rating').value = currentRating;
+          updateStars();
+        });
+        star.addEventListener('mouseenter', () => {
+          const hoverValue = parseInt(star.dataset.value);
+          stars.forEach((s, i) => {
+            s.classList.toggle('filled', i < hoverValue);
+            s.classList.toggle('empty', i >= hoverValue);
+          });
+        });
+      });
+      document.getElementById('star-rating').addEventListener('mouseleave', updateStars);
+    }
+
+    function updateStars() {
+      const stars = document.querySelectorAll('#star-rating .star');
+      stars.forEach((star, i) => {
+        star.classList.toggle('filled', i < currentRating);
+        star.classList.toggle('empty', i >= currentRating);
+      });
+    }
+
+    // Render star rating display
+    function renderStars(rating) {
+      let stars = '';
+      for (let i = 0; i < 5; i++) {
+        stars += `<span class="${i < rating ? 'text-amber-400' : 'text-slate-300'}">★</span>`;
+      }
+      return stars;
+    }
+
+    // Get badge color for feedback type
+    function getTypeBadgeColor(type) {
+      const colors = {
+        'General': 'bg-blue-100 text-blue-800',
+        'Suggestion': 'bg-purple-100 text-purple-800',
+        'Complaint': 'bg-red-100 text-red-800',
+        'Appreciation': 'bg-green-100 text-green-800'
+      };
+      return colors[type] || 'bg-slate-100 text-slate-800';
+    }
+
+    // Format date
+    function formatDate(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Update statistics
+    function updateStats() {
+      const total = feedbackData.length;
+      const avgRating = total > 0 ? (feedbackData.reduce((sum, f) => sum + (f.rating || 0), 0) / total).toFixed(1) : '0.0';
+      const positive = feedbackData.filter(f => f.rating >= 4).length;
+
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-avg').textContent = avgRating;
+      document.getElementById('stat-positive').textContent = positive;
+      document.getElementById('feedback-count').textContent = `${total} feedback entries`;
+
+      // Show/hide limit warning
+      const limitWarning = document.getElementById('limit-warning');
+      if (total >= 999) {
+        limitWarning.classList.remove('hidden');
+      } else {
+        limitWarning.classList.add('hidden');
+      }
+    }
+
+    // Render feedback list
+    function renderFeedbackList() {
+      const container = document.getElementById('feedback-list');
+      const emptyState = document.getElementById('empty-state');
+      const filterCourse = document.getElementById('filter-course').value;
+      const filterType = document.getElementById('filter-type').value;
+
+      let filtered = [...feedbackData];
+      if (filterCourse) {
+        filtered = filtered.filter(f => f.course === filterCourse);
+      }
+      if (filterType) {
+        filtered = filtered.filter(f => f.feedback_type === filterType);
+      }
+
+      // Sort by date (newest first)
+      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      // Clear existing feedback items but keep empty state
+      const existingItems = container.querySelectorAll('.feedback-item');
+      existingItems.forEach(item => item.remove());
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        
+        filtered.forEach(feedback => {
+          const item = document.createElement('div');
+          item.className = 'feedback-item bg-white rounded-xl p-6 shadow-sm border border-slate-100';
+          item.dataset.id = feedback.__backendId;
+          item.innerHTML = `
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <div class="flex-1">
+                <div class="flex flex-wrap items-center gap-2 mb-2">
+                  <span class="font-semibold text-slate-800">${escapeHtml(feedback.student_name)}</span>
+                  <span class="text-slate-300">•</span>
+                  <span class="text-slate-600">${escapeHtml(feedback.course)}</span>
+                  <span class="px-2 py-1 text-xs font-medium rounded-full ${getTypeBadgeColor(feedback.feedback_type)}">${escapeHtml(feedback.feedback_type)}</span>
+                </div>
+                <div class="flex items-center gap-1 mb-3 text-lg">
+                  ${renderStars(feedback.rating)}
+                </div>
+                <p class="text-slate-600">${escapeHtml(feedback.message)}</p>
+                <p class="text-sm text-slate-400 mt-3">${formatDate(feedback.created_at)}</p>
+              </div>
+              <button class="delete-btn text-slate-400 hover:text-red-600 transition-colors p-2" data-id="${feedback.__backendId}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+          `;
+          container.appendChild(item);
+        });
+
+        // Attach delete handlers
+        container.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', () => showDeleteModal(btn.dataset.id));
+        });
+      }
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+
+    // Show delete confirmation modal
+    function showDeleteModal(id) {
+      deleteTarget = feedbackData.find(f => f.__backendId === id);
+      document.getElementById('delete-modal').classList.remove('hidden');
+    }
+
+    // Hide delete modal
+    function hideDeleteModal() {
+      deleteTarget = null;
+      document.getElementById('delete-modal').classList.add('hidden');
+      document.getElementById('delete-spinner').classList.add('hidden');
+    }
+
+    // Handle form submission
+    async function handleSubmit(e) {
+      e.preventDefault();
+
+      // Check limit
+      if (feedbackData.length >= 999) {
+        document.getElementById('limit-warning').classList.remove('hidden');
+        return;
+      }
+
+      const form = e.target;
+      const submitBtn = document.getElementById('submit-btn');
+      const submitText = document.getElementById('submit-btn-text');
+      const spinner = document.getElementById('submit-spinner');
+      const successMsg = document.getElementById('success-message');
+      const errorMsg = document.getElementById('error-message');
+
+      // Validate rating
+      if (currentRating === 0) {
+        document.getElementById('error-text').textContent = 'Please select a rating.';
+        errorMsg.classList.remove('hidden');
+        successMsg.classList.add('hidden');
+        return;
+      }
+
+      // Show loading state
+      submitBtn.disabled = true;
+      submitText.textContent = 'Submitting...';
+      spinner.classList.remove('hidden');
+      successMsg.classList.add('hidden');
+      errorMsg.classList.add('hidden');
+
+      const feedbackEntry = {
+        student_name: document.getElementById('student-name').value.trim(),
+        course: document.getElementById('course').value,
+        feedback_type: document.getElementById('feedback-type').value,
+        rating: currentRating,
+        message: document.getElementById('message').value.trim(),
+        created_at: new Date().toISOString()
+      };
+
+      try {
+        const result = await window.dataSdk.create(feedbackEntry);
+        
+        if (result.isOk) {
+          successMsg.classList.remove('hidden');
+          form.reset();
+          currentRating = 0;
+          updateStars();
+        } else {
+          document.getElementById('error-text').textContent = 'Failed to submit feedback. Please try again.';
+          errorMsg.classList.remove('hidden');
+        }
+      } catch (error) {
+        document.getElementById('error-text').textContent = 'An error occurred. Please try again.';
+        errorMsg.classList.remove('hidden');
+      }
+
+      // Reset button state
+      submitBtn.disabled = false;
+      submitText.textContent = window.elementSdk?.config?.submit_button_text || defaultConfig.submit_button_text;
+      spinner.classList.add('hidden');
+    }
+
+    // Handle delete
+    async function handleDelete() {
+      if (!deleteTarget) return;
+
+      const confirmBtn = document.getElementById('confirm-delete');
+      const spinner = document.getElementById('delete-spinner');
+
+      confirmBtn.disabled = true;
+      spinner.classList.remove('hidden');
+
+      try {
+        const result = await window.dataSdk.delete(deleteTarget);
+        if (result.isOk) {
+          hideDeleteModal();
+        } else {
+          console.error('Failed to delete');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+      }
+
+      confirmBtn.disabled = false;
+      spinner.classList.add('hidden');
+    }
+
+    // Data handler for SDK
+    const dataHandler = {
+      onDataChanged(data) {
+        feedbackData = data || [];
+        updateStats();
+        renderFeedbackList();
+      }
+    };
+
+    // Config change handler
+    async function onConfigChange(config) {
+      const cfg = { ...defaultConfig, ...config };
+      
+      // Update title
+      document.getElementById('nav-title').innerHTML = `
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+        </svg>
+        ${escapeHtml(cfg.system_title)}
+      `;
+      
+      // Update welcome message
+      document.getElementById('welcome-text').textContent = cfg.welcome_message;
+      
+      // Update submit button text
+      document.getElementById('submit-btn-text').textContent = cfg.submit_button_text;
+
+      // Apply colors
+      document.body.style.backgroundColor = cfg.background_color;
+      
+      // Apply text color to headings
+      document.querySelectorAll('.text-slate-800').forEach(el => {
+        el.style.color = cfg.text_color;
+      });
+
+      // Apply surface color to cards
+      document.querySelectorAll('.bg-white').forEach(el => {
+        el.style.backgroundColor = cfg.surface_color;
+      });
+
+      // Apply primary action color
+      document.querySelectorAll('.bg-indigo-600').forEach(el => {
+        el.style.backgroundColor = cfg.primary_action_color;
+      });
+      document.querySelectorAll('.text-indigo-600').forEach(el => {
+        el.style.color = cfg.primary_action_color;
+      });
+
+      // Apply secondary action color
+      document.querySelectorAll('.bg-slate-600').forEach(el => {
+        el.style.backgroundColor = cfg.secondary_action_color;
+      });
+    }
+
+    // Map to capabilities
+    function mapToCapabilities(config) {
+      const cfg = { ...defaultConfig, ...config };
+      return {
+        recolorables: [
+          {
+            get: () => cfg.background_color,
+            set: (value) => window.elementSdk.setConfig({ background_color: value })
+          },
+          {
+            get: () => cfg.surface_color,
+            set: (value) => window.elementSdk.setConfig({ surface_color: value })
+          },
+          {
+            get: () => cfg.text_color,
+            set: (value) => window.elementSdk.setConfig({ text_color: value })
+          },
+          {
+            get: () => cfg.primary_action_color,
+            set: (value) => window.elementSdk.setConfig({ primary_action_color: value })
+          },
+          {
+            get: () => cfg.secondary_action_color,
+            set: (value) => window.elementSdk.setConfig({ secondary_action_color: value })
+          }
+        ],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      };
+    }
+
+    // Map to edit panel values
+    function mapToEditPanelValues(config) {
+      const cfg = { ...defaultConfig, ...config };
+      return new Map([
+        ['system_title', cfg.system_title],
+        ['welcome_message', cfg.welcome_message],
+        ['submit_button_text', cfg.submit_button_text]
+      ]);
+    }
+
+    // Initialize application
+    async function init() {
+      // Setup navigation
+      document.querySelectorAll('.nav-link, .quick-action').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const page = link.dataset.page;
+          if (page) navigateTo(page);
+        });
+      });
+
+      // Setup star rating
+      setupStarRating();
+
+      // Setup form submission
+      document.getElementById('feedback-form').addEventListener('submit', handleSubmit);
+
+      // Setup filters
+      document.getElementById('filter-course').addEventListener('change', renderFeedbackList);
+      document.getElementById('filter-type').addEventListener('change', renderFeedbackList);
+
+      // Setup delete modal
+      document.getElementById('cancel-delete').addEventListener('click', hideDeleteModal);
+      document.getElementById('confirm-delete').addEventListener('click', handleDelete);
+      document.getElementById('delete-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'delete-modal') hideDeleteModal();
+      });
+
+      // Initialize Element SDK
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities,
+          mapToEditPanelValues
+        });
+      }
+
+      // Initialize Data SDK
+      if (window.dataSdk) {
+        const result = await window.dataSdk.init(dataHandler);
+        if (!result.isOk) {
+          console.error('Failed to initialize Data SDK');
+        }
+      }
+
+      // Initial render
+      onConfigChange(defaultConfig);
+    }
+
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bbce327e62a3b7f',t:'MTc2ODA1NTU4Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
